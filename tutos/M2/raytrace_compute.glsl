@@ -3,6 +3,8 @@
 
 #ifdef COMPUTE_SHADER
 
+#define M_PI 3.1415926535897932384626433832795
+
 struct Triangle
 {
     vec3 a;		// sommet
@@ -16,19 +18,7 @@ struct Triangle
 struct BBox
 {
     vec3 pmin;
-    //int paspmin;
     vec3 pmax;
-    //int paspmax;
-};
-
-
-struct Node
-{
-    BBox bounds;
-    int left;
-    int right;
-    int padleft;
-    int padright;
 };
 
 struct NodeGPU
@@ -38,16 +28,6 @@ struct NodeGPU
     vec3 pmax;
     int right;
 };
-
-
-bool internal(in Node node ) { return (node.right > 0); };    // renvoie vrai si le noeud est un noeud interne
-int internal_left(in Node node ) {  return node.left; };     // renvoie le fils gauche du noeud interne 
-int internal_right(in Node node ) { return node.right; };   // renvoie le fils droit
-
-bool leaf(in Node node ) { return (node.right < 0); };                            // renvoie vrai si le noeud est une feuille
-int leaf_begin(in Node node ) { return -node.left; };           // renvoie le premier objet de la feuille
-int leaf_end(in Node node ) { return -node.right; };   
-
 
 bool internal(in NodeGPU node ) { return (node.right > 0); };                        // renvoie vrai si le noeud est un noeud interne
 int internal_left(in NodeGPU node ) {  return node.left; };     // renvoie le fils gauche du noeud interne 
@@ -68,29 +48,6 @@ vec3 global( const in vec3 n) {
     return  vec3(n.x * t + n.y * b + n.z * n); 
 };
 
-/*
-struct World
-{
-    World( const vec3 _n ) : n(_n){
-        float sign= std::copysign(1.0f, n.z);
-        float a= -1.0f / (sign + n.z);
-        float d= n.x * n.y * a;
-        t= Vector(1.0f + sign * n.x * n.x * a, sign * d, -sign * n.x);
-        b= Vector(d, sign + n.y * n.y * a, -n.y);
-    }
-
-    // transforme le vecteur du repere local vers le repere du monde
-    Vector operator( ) ( const Vector& local )  const { return local.x * t + local.y * b + local.z * n; }
-
-    // transforme le vecteur du repere du monde vers le repere local
-    Vector inverse( const Vector& global ) const { return Vector(dot(global, t), dot(global, b), dot(global, n)); }
-
-    Vector t;
-    Vector b;
-    Vector n;
-};
-
-*/
 
 const uint rng_a= 1103515245;
 const uint rng_b= 12345;
@@ -102,9 +59,7 @@ float rng( inout uint state )
 {
     state= (rng_a * state + rng_b) % uint(rng_m);
     return float(state) / rng_m;
-}
-
-#define M_PI 3.1415926535897932384626433832795
+};
 
 
 // genere une direction sur l'hemisphere,
@@ -118,7 +73,7 @@ vec3 sample35(in const float u1, in const float u2)
     // passage vers x, y, z
     float sin_theta = sqrt(1 - cos_theta * cos_theta);
     return vec3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
-}
+};
 
 // evalue la densite de proba, la pdf de la direction, cf GI compendium, eq 35
 float pdf35(in const vec3 w)
@@ -126,7 +81,7 @@ float pdf35(in const vec3 w)
     if (w.z < 0)
         return 0;
     return w.z / float(M_PI);
-}
+};
 
 
 // shader storage buffer 0
@@ -140,19 +95,13 @@ layout(std430, binding= 1) readonly buffer nodeData
     NodeGPU nodes[];
 };
 
-// layout(std430, binding= 2) readonly buffer trianglesBase
-// {
-//     Triangle triangles2[];
-// };
-
-
 BBox bounds( in const NodeGPU node ) 
 {
    BBox box;
    box.pmin= node.pmin;
    box.pmax= node.pmax;
    return box;
-}
+};
 
 
 struct RayHit
@@ -197,35 +146,8 @@ bool intersect_new( in const Triangle triangle, inout RayHit ray, in const float
     ray.tr_ab = triangle.ab;
     ray.tr_ac = triangle.ac;
 
-    /* calculate t, ray intersects triangle */
-    // rt= dot(triangle.ac, qvec) * inv_det;
-    // ru= u;
-    // rv= v;
-    // id = triangle.id;
-
-
-    //return true;
-    
-    // ne renvoie vrai que si l'intersection est valide : 
-    // interieur du triangle, 0 < u < 1, 0 < v < 1, 0 < u+v < 1
-    // if(any(greaterThan(vec3(u, v, u+v), vec3(1, 1, 1))) || any(lessThan(vec2(u, v), vec2(0, 0)))){
-    //     return false;
-    // }
-    // comprise entre 0 et tmax du rayon
     return true;//(ray.t < tmax && ray.t > 0);
 };
-
-
-
-
-
-
-void swap(inout float a, inout float b){
-    float tempa = a;
-    a = b;
-    b = tempa;
-}
-
 
 
 bool intersect( const in BBox node, in const RayHit ray, const in vec3 invd)
@@ -239,38 +161,7 @@ bool intersect( const in BBox node, in const RayHit ray, const in vec3 invd)
     float t1= min(tmax.x, min(tmax.y, tmax.z));
 
     return max(t0, 0) <= min(t1, 1000.0);
-}
-
-
-// bool intersect(in BBox bbox,in const RayHit ray, in const vec3 invd ) //same prof
-// {
-//     vec3 rmin= bbox.pmin;
-//     vec3 rmax= bbox.pmax;
-//     if(ray.d.x < 0) {
-//         float temp = rmin.x;
-//         rmin.x = rmax.x;
-//         rmax.x = temp;
-//         //std::swap(rmin.x, rmax.x);
-//     }
-//     if(ray.d.y < 0){
-//         float temp = rmin.y;
-//         rmin.y = rmax.y;
-//         rmax.y = temp;    
-//         //std::swap(rmin.y, rmax.y);
-//     } 
-//     if(ray.d.z < 0){
-//         float temp = rmin.z;
-//         rmin.z = rmax.z;
-//         rmax.z = temp;   
-//         //std::swap(rmin.z, rmax.z);
-//     } 
-//     vec3 dmin= (rmin - ray.o) * invd;
-//     vec3 dmax= (rmax - ray.o) * invd;
-    
-//     float tmin= max(dmin.z, max(dmin.y, max(dmin.x, 0.f)));
-//     float tmax= min(dmax.z, min(dmax.y, min(dmax.x, ray.t)));
-//     return (tmin<= tmax);
-// };
+};
 
 uniform mat4 invMatrix;
 uniform int frame;
@@ -287,7 +178,7 @@ bool intersect( in BBox bbox, in const RayHit ray )
 void intersect(inout RayHit ray, in const vec3 invd, in const float tmax)
     {
 
-    int stack[32];
+    int stack[16];
     int top= 0;
     
     // empiler la racine
@@ -312,7 +203,7 @@ void intersect(inout RayHit ray, in const vec3 invd, in const float tmax)
             }
             else // if(node.internal())
             {
-                //assert(top +1 < 64);       // le noeud est touche, empiler les fils
+                // le noeud est touche, empiler les fils
                 stack[top++]= internal_left(node);
                 stack[top++]= internal_right(node);
             }
@@ -321,7 +212,7 @@ void intersect(inout RayHit ray, in const vec3 invd, in const float tmax)
 };
 
 
-void intersect( inout RayHit ray , in const float tmax)
+void intersect( inout RayHit ray , in const float tmax) //avec bvh
 {
     vec3 invd= vec3(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
     intersect(ray, invd, tmax);
@@ -330,7 +221,7 @@ void intersect( inout RayHit ray , in const float tmax)
 
 
 
-void test_intersect( inout RayHit rayhit , in const float tmax) 
+void test_intersect( inout RayHit rayhit , in const float tmax) //sans bvh
 {
     for(int i= 0; i < triangles.length(); i++)
     {
@@ -356,7 +247,7 @@ bool test_intersect_bool( inout RayHit rayhit , in const float tmax)
 bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
 {
 
-    int stack[64];
+    int stack[16];
     int top= 0;
     
     // empiler la racine
@@ -367,22 +258,12 @@ bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
     while(top > 0)
     {
         int index= stack[--top];
-
-        //const NodeGPU node= nodes[index];
         const NodeGPU node= nodes[index];
-        // if (index == 62){
-        //     if ()
-        //     return test_intersect_bool(ray,tmax);
-        // }
+
 
         if(leaf(node))
         {                
-            // if (index == 62){ //test node ok ?
-            //     if (node.bounds.pmax.y==1.99) {
-            //         return test_intersect_bool(ray,tmax);
-            //     }
-            // }
-            //bool intersect = false;
+ 
             for(int i= leaf_begin(node); i < leaf_end(node); i++){
                 if(intersect_new(triangles[i],ray,tmax)){
                     return true;
@@ -391,10 +272,8 @@ bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
         }
         else // if(node.internal())
         {
-            //if(intersect(node.bounds, ray, invd))
             if(intersect(bounds(node), ray, invd))
             {
-            //assert(top +1 < 64);       // le noeud est touche, empiler les fils
             stack[top++]= internal_left(node);
             stack[top++]= internal_right(node);
             }
@@ -411,8 +290,6 @@ bool intersect_bool( inout RayHit ray , in const float tmax)
     return intersect_bool(ray, invd, tmax);
 
 };
-
-
 
 
 // image resultat
@@ -445,8 +322,12 @@ void main( )
 
 
     RayHit rayhit = RayHit(o,hit,d,id,vec3(-1),vec3(-1),u,v);
-    //intersect( rayhit , tmax, hit, hitu, hitv,id);
     
+
+    //////////////////////// sans bvh :  /////////////////////////////////
+    //test_intersect( rayhit , tmax) ;
+
+    //////////////////////// avec bvh :  /////////////////////////////////
     intersect( rayhit , tmax) ;
 
     hit=rayhit.t;
@@ -456,8 +337,6 @@ void main( )
     
     float w = 1.0 - hitu - hitv;
     vec3 p = rayhit.o+ rayhit.t * rayhit.d;
-    //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
-    //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
     vec3 n_p = normalize(cross(rayhit.tr_ab,rayhit.tr_ac));
 
     int N_ray = 4;
@@ -471,8 +350,6 @@ void main( )
 
         uint k =  uint((frame*N_ray+ni));
 
-        //vec3 d_l = normalize(vec3(0.0,0.0,1.98)-p);///
-        //vec3 d_l = vec3(0.0,1.0,0.0);
         float u1 = rng(state);
         float u2 = rng(state);
         
@@ -480,11 +357,7 @@ void main( )
         float pdf = pdf35(d_l);
 
 
-
-        // if(dot(d_l, n_p) > 0){
-        //     n_p= -n_p;
-        // }
-
+        //passage dans le repere monde
         float sign= n_p.z < 0 ? -1.0f : 1.0f;
         float a= -1.0f / (sign + n_p.z);
         float e= n_p.x * n_p.y * a;
@@ -507,44 +380,37 @@ void main( )
         //int i2;
         RayHit rayhit2 = RayHit(p+0.01*n_p,hit2,d_l,id2,vec3(-1),vec3(-1),u22,v2);
 
-        //test_intersect(rayhit2 , tmax2);
 
-        //if(rayhit2.triangle_id == (-1)){
+        //////////////////////// sans bvh :  /////////////////////////////////
+        // if(test_intersect_bool(rayhit2 , tmax2)){
+        //     vu_sun = 0;
+        // }
+
+        //////////////////////// avec bvh :  /////////////////////////////////
         if(intersect_bool(rayhit2 , tmax2)){
-            v = 0;
             vu_sun = 0;
         }
 
         if (vu_sun==1){
-            //vec4 diffuse = vec4(0,0.140,0.450,0.0911);
+
             vec4 diffuse = vec4(1.0);
             float cos_theta = max(float(0.0), dot(n_p, d_l));
-            //float cos_theta = abs(dot(n_p, d_l));
-            ambient = ambient + diffuse*cos_theta / (float(M_PI)*pdf);// * (cos_theta / (float(M_PI) * pdf35 * N_ray));
+
+            ambient = ambient + diffuse*cos_theta / (float(M_PI)*pdf);
         }
 
     }
-    // vec4 Color = vec4(0, 0, 0, 1);
 
-    // if (hit < 1.0 && hit > 0){ //if dans mesh
-    //     //Color = vec4(hitu, hitv, 0, 1)*v;
-    //     Color += vec4(1-hit, 1-hit, 1-hit, 1)*(1-v);
-    //     Color += vec4(1-hit, 1-hit, 0, 1)*v;
-    // }
-    // else {
-    //     Color = vec4(0, 0, 1, 1);
-    // }
     vec4 Color = vec4(0.0);
-    if (hit < 1.0 && hit > 0){ //if dans mesh
-        Color = Color + ambient;//vec4(0, 0, 0, 1);
+    if (hit < 1.0 && hit > 0){ 
+        Color = Color + ambient;
     }
     vec4 curr_im = imageLoad(image, ivec2(gl_GlobalInvocationID.xy));
-    //Color = vec4(1-hitu-hitv, hitu, hitv,1); //(curr_im *frame*N_ray + Color) / (frame *N_ray+N_ray);
-    //Color = vec4(n_p,1);
+
     Color = (curr_im *frame*N_ray + Color) / (frame *N_ray+N_ray);
-    //Color = curr_im + Color/24.0f;
+
     // ecrire le resultat dans l'image
     imageStore(image, ivec2(gl_GlobalInvocationID.xy), Color );
     imageStore(seeds, ivec2(gl_GlobalInvocationID.xy), uvec4(state) );
-}
+};
 #endif

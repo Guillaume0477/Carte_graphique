@@ -19,131 +19,6 @@
 #include <random>
 
 
-// cf tuto_storage
-
-namespace glsl 
-{
-    // type de base alignes sur 4 octets
-    template < typename T >
-    struct alignas(4) gscalar
-    { 
-        alignas(4) T x;
-        
-        gscalar( ) : x(T()) {}
-        gscalar( const T& v ) : x(v) {}
-        gscalar& operator= ( const T& v ) { x= v; return *this; }
-        operator T ( ) { return x; }
-    };
-
-    typedef gscalar<float> gfloat;
-    typedef gscalar<int> gint;
-    typedef gscalar<unsigned int> guint;
-    typedef gscalar<bool> gbool;
-    
-    // vec2, alignes sur 2 * alignement type de base du vecteur
-    template < typename T >
-    struct alignas(8) gvec2
-    {
-        alignas(4) T x, y;
-        
-        gvec2( ) {}
-        gvec2( const gvec2<T>& v ) : x(v.x), y(v.y) {}
-        gvec2( const ::vec2& v ) : x(v.x), y(v.y) {}
-        gvec2& operator= ( const gvec2<T>& v ) { x= v.x; y= v.y; return *this; }
-        gvec2& operator= ( const ::vec2& v ) { x= v.x; y= v.y; return *this; }
-        operator ::vec2 ( ) { return ::vec2(float(x), float(y)); }
-    };
-    
-    typedef gvec2<float> vec2;
-    typedef gvec2<int> ivec2;
-    typedef gvec2<unsigned int> uvec2;
-    typedef gvec2<int> bvec2;
-    
-    // vec3, alignes sur 4 * alignement type de base du vecteur
-    template < typename T >
-    struct alignas(16) gvec3
-    {
-        alignas(4) T x, y, z;
-        
-        gvec3( ) {}
-        gvec3( const gvec3<T>& v ) : x(v.x), y(v.y), z(v.z) {}
-        gvec3( const ::vec3& v ) : x(v.x), y(v.y), z(v.z) {}
-        gvec3( const Point& v ) : x(v.x), y(v.y), z(v.z) {}
-        gvec3( const Vector& v ) : x(v.x), y(v.y), z(v.z) {}
-        gvec3& operator= ( const gvec3<T>& v ) { x= v.x; y= v.y; z= v.z; return *this; }
-        gvec3& operator= ( const ::vec3& v ) { x= v.x; y= v.y; z= v.z; return *this; }
-        gvec3& operator= ( const Point& v ) { x= v.x; y= v.y; z= v.z; return *this; }
-        gvec3& operator= ( const Vector& v ) { x= v.x; y= v.y; z= v.z; return *this; }
-        operator ::vec3 ( ) { return ::vec3(float(x), float(y), float(y)); }
-    };
-    
-    typedef gvec3<float> vec3;
-    typedef gvec3<int> ivec3;
-    typedef gvec3<unsigned int> uvec3;
-    typedef gvec3<int> bvec3;
-    
-    // vec4, alignes sur 4 * alignement type de base du vecteur
-    template < typename T >
-    struct alignas(16) gvec4
-    {
-        alignas(4) T x, y, z, w;
-        
-        gvec4( ) {}
-        gvec4( const gvec4<T>& v ) : x(v.x), y(v.y), z(v.z), w(v.w) {}
-        gvec4( const ::vec4& v ) : x(v.x), y(v.y), z(v.z), w(v.w) {}
-        gvec4& operator= ( const gvec4<T>& v ) { x(v.x), y(v.y), z(v.z), w(v.w) ; return *this; }
-        gvec4& operator= ( const ::vec4& v ) { x(v.x), y(v.y), z(v.z), w(v.w) ; return *this; }
-        gvec4& operator= ( const Color& c ) { x= c.r; y= c.g; z= c.b; w= c.a; return *this; }
-        operator ::vec4 ( ) { return ::vec4(float(x), float(y), float(y), float(w)); }
-    };
-    
-    typedef gvec4<float> vec4;
-    typedef gvec4<int> ivec4;
-    typedef gvec4<unsigned int> uvec4;
-    typedef gvec4<int> bvec4;
-}
-
-// struct Triangle 
-// {
-//     vec3 a;
-//     int pada;
-//     vec3 ab;
-//     int padb;
-//     vec3 ac;
-//     int id;
-//     // int pad1;
-//     // int pad2;
-//     // int pad3;
-// };
-
-
-
-struct Ray
-{
-    Point o;
-    float pad;
-    Vector d;
-    float tmax;
-
-    Ray() : o(), d(), tmax(0) {}
-    Ray(const Point &_o, const Point &_e) : o(_o), d(Vector(_o, _e)), tmax(1) {}
-    Ray(const Point &_o, const Vector &_d) : o(_o), d(_d), tmax(FLT_MAX) {}
-};
-
-// intersection rayon / triangle.
-struct Hit
-{
-    int triangle_id;
-    float t;
-    float u, v;
-
-    Hit() : triangle_id(-1), t(0), u(0), v(0) {} // pas d'intersection
-    Hit(const int _id, const float _t, const float _u, const float _v) : triangle_id(_id), t(_t), u(_u), v(_v) {}
-
-    operator bool() const { return (triangle_id != -1); } // renvoie vrai si l'intersection est initialisee...
-};
-
-
  struct RayHit
  {
      Point o;            // origine
@@ -172,28 +47,11 @@ struct Hit
 
 
 // renvoie la normale interpolee d'un triangle.
-Vector normal(const Hit &hit, const TriangleData &triangle)
-{
-    return normalize((1 - hit.u - hit.v) * Vector(triangle.na) + hit.u * Vector(triangle.nb) + hit.v * Vector(triangle.nc));
-}
-
-// renvoie la normale interpolee d'un triangle.
 Vector normal(const RayHit &hit, const TriangleData &triangle)
 {
     return normalize((1 - hit.u - hit.v) * Vector(triangle.na) + hit.u * Vector(triangle.nb) + hit.v * Vector(triangle.nc));
 }
 
-// renvoie le point d'intersection sur le triangle.
-Point point(const Hit &hit, const TriangleData &triangle)
-{
-    return (1 - hit.u - hit.v) * Point(triangle.a) + hit.u * Point(triangle.b) + hit.v * Point(triangle.c);
-}
-
-// renvoie le point d'intersection sur le rayon
-Point point(const Hit &hit, const Ray &ray)
-{
-    return ray.o + hit.t * ray.d;
-}
 
 
 
@@ -248,12 +106,6 @@ struct Triangle
     int pade1;
     vec3 e2;
     int id;
-//     vec3 a;
-//     int pada;
-//     vec3 ab;
-//     int padb;
-//     vec3 ac;
-//     int id;
 
     Triangle( const TriangleData& data, const int _id ) : p(data.a),padp(1), e1(Vector(data.a, data.b)),pade1(1), e2(Vector(data.a, data.c)), id(_id) {}
     Triangle( const Point &_a, const int _padp, const Point &_b, const int _pade1 , const Point &_c, const int _id) : p(_a), padp(_padp), e1(Vector(_a, _b)), pade1(_pade1), e2(Vector(_a, _c)), id(_id) {}
@@ -266,29 +118,7 @@ struct Triangle
         renvoie vrai + les coordonnees barycentriques (u, v) du point d'intersection + sa position le long du rayon (t).
         convention barycentrique : p(u, v)= (1 - u - v) * a + u * b + v * c
     */
-    Hit intersect(const Ray &ray, const float htmax) const
-    {
-        Vector pvec = cross(ray.d, e2);
-        float det = dot(e1, pvec);
 
-        float inv_det = 1 / det;
-        Vector tvec(p, ray.o);
-
-        float u = dot(tvec, pvec) * inv_det;
-        if (u < 0 || u > 1)
-            return Hit();
-
-        Vector qvec = cross(tvec, e1);
-        float v = dot(ray.d, qvec) * inv_det;
-        if (v < 0 || u + v > 1)
-            return Hit();
-
-        float t = dot(e2, qvec) * inv_det;
-        if (t > htmax || t < 0)
-            return Hit();
-
-        return Hit(id, t, u, v); // p(u, v)= (1 - u - v) * a + u * b + v * c
-    }
     void intersect( RayHit &ray ) const
     {
         Vector pvec= cross(ray.d, e2);
@@ -320,67 +150,6 @@ struct Triangle
         return box.insert(Point(p)+Vector(e1)).insert(Point(p)+Vector(e2));
     }
 };
-
-/*
-// ensemble de triangles.
-// a remplacer par une vraie structure acceleratrice, un bvh, par exemple
-struct BVH
-{
-    std::vector<Triangle> triangles;
-
-    BVH() = default;
-    BVH(const Mesh &mesh) { build(mesh); }
-
-    void build(const Mesh &mesh)
-    {
-        triangles.clear();
-        triangles.reserve(mesh.triangle_count());
-        for (int id = 0; id < mesh.triangle_count(); id++)
-        {
-            TriangleData data = mesh.triangle(id);
-            triangles.push_back(Triangle(data.a, data.b, data.c, id));
-        }
-
-        printf("%d triangles\n", int(triangles.size()));
-        assert(triangles.size());
-    }
-
-    Hit intersect(const Ray &ray) const
-    {
-        Hit hit;
-        float tmax = ray.tmax;
-        for (int id = 0; id < int(triangles.size()); id++)
-            // ne renvoie vrai que si l'intersection existe dans l'intervalle [0 tmax]
-            if (Hit h = triangles[id].intersect(ray, tmax))
-            {
-                hit = h;
-                tmax = h.t;
-            }
-
-        return hit;
-    }
-
-    bool visible(const Ray &ray) const
-    {
-        for (int id = 0; id < int(triangles.size()); id++)
-            if (triangles[id].intersect(ray, ray.tmax))
-                return false;
-
-        return true;
-    }
-};
-*/
- 
-// struct BBoxNode{
-//     Point pmin;
-//     int left;
-//     Point pmax;
-//     int right;
-
-//     BBoxNode BBoxNode { pmin, left,pmax, right };
-// };
-
-
 
 struct Node
 {
@@ -454,17 +223,7 @@ Node make_leaf( const BBox& bounds, const int begin, const int end )
          return root;
      }
      
-     void intersect( RayHit& ray ) const
-     {
-         Vector invd= Vector(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
-         intersect( ray, invd);
-     }
-     
-     void intersect_fast( RayHit& ray ) const
-     {
-         Vector invd= Vector(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
-         intersect_fast(root, ray, invd);
-     }
+
      
  protected:
      // construction d'un noeud
@@ -526,90 +285,6 @@ Node make_leaf( const BBox& bounds, const int begin, const int end )
          return bbox;
      }
      
-    //  void intersect( const int index, RayHit& ray, const Vector& invd ) const
-    //  {
-    //      const Node& node= nodes[index];
-    //      if(node.bounds.intersect(ray, invd))
-    //      {
-    //          if(node.leaf())
-    //          {
-    //              for(int i= node.leaf_begin(); i < node.leaf_end(); i++)
-    //                  triangles[i].intersect(ray);
-    //          }
-    //          else // if(node.internal())
-    //          {
-    //              intersect(node.internal_left(), ray, invd);
-    //              intersect(node.internal_right(), ray, invd);
-    //          }
-    //      }
-    //  }
-
-    void intersect( RayHit& ray, const Vector& invd ) const
-     {
-
-        int stack[64];
-        int top= 0;
-        
-        // empiler la racine
-        stack[top++]= root;
-        
-        //float tmax= ray.tmax;
-        // tant qu'il y a un noeud dans la pile
-        while(top > 0)
-        {
-            int index= stack[--top];
-            
-            const Node& node= nodes[index];
-            if(node.bounds.intersect(ray, invd))
-            {
-                if(node.leaf())
-                {
-                    for(int i= node.leaf_begin(); i < node.leaf_end(); i++)
-                        triangles[i].intersect(ray);
-                }
-                else // if(node.internal())
-                {
-                    assert(top +1 < 64);       // le noeud est touche, empiler les fils
-                    stack[top++]= node.internal_left();
-                    stack[top++]= node.internal_right();
-                }
-            }
-        }
-     }
-     void intersect_fast( const int index, RayHit& ray, const Vector& invd ) const
-     {
-         const Node& node= nodes[index];
-         if(node.leaf())
-         {
-             for(int i= node.leaf_begin(); i < node.leaf_end(); i++)
-                 triangles[i].intersect(ray);
-         }
-         else // if(node.internal())
-         {
-             const Node& left_node= nodes[node.left];
-             const Node& right_node= nodes[node.right];
-             
-             BBoxHit left= left_node.bounds.intersect(ray, invd);
-             BBoxHit right= right_node.bounds.intersect(ray, invd);
-             if(left && right)                                                   // les 2 fils sont touches par le rayon...
-             {
-                 if(left.centroid() < right.centroid())                          // parcours de gauche a droite
-                 {
-                     intersect_fast(node.internal_left(), ray, invd);
-                     intersect_fast(node.internal_right(), ray, invd);
-                 }
-                 else                                                            // parcours de droite a gauche                                        
-                 {
-                     intersect_fast(node.internal_right(), ray, invd);
-                     intersect_fast(node.internal_left(), ray, invd);
-                 }
-             }
-             else if(left)                                                       // uniquement le fils gauche
-                 intersect_fast(node.internal_left(), ray, invd);
-             else if(right)
-                 intersect_fast(node.internal_right(), ray, invd);               // uniquement le fils droit
-         }
-     } 
  };
   
 
@@ -623,21 +298,6 @@ struct NodeGPU
     NodeGPU( const Node& node) : pmin(node.bounds.pmin),left(node.left), pmax(node.bounds.pmax),right(node.right) {}
     
 };
-
-struct NodeGPUcousu
-{
-    vec3 pmin;
-    int left;
-    vec3 pmax;
-    int right;
-    vec3 skip;
-    int pad;
-
-    NodeGPUcousu( const Node& node) : pmin(node.bounds.pmin),left(node.left), pmax(node.bounds.pmax),right(node.right) {}
-    
-};
-
-
 
 struct RT : public AppTime
 {
@@ -696,17 +356,6 @@ struct RT : public AppTime
         root_uni = bvh.root;
         std::cout<<"root_uni "<<root_uni<<std::endl;
 
-
-        std::vector<Node> dataNode;
-        //data.reserve(m_mesh.triangle_count());
-        for(int i= 0; i < bvh.nodes.size() ; i++)
-        {
-            //Node BNode= Node(bvh.nodes[i].bounds, bvh.nodes[i].left, bvh.nodes[i].right, bvh.nodes[i].padleft, bvh.nodes[i].padright);
-            Node BNode= Node(bvh.nodes[i]);
-            //data.push_back( { Point(t.a),1, Point(t.b) - Point(t.a),1, Point(t.c) - Point(t.a), i } );
-            dataNode.emplace_back(BNode);
-        }
-
         std::vector<NodeGPU> dataNodeGPU; //change bbox pour envoyer au GPU
         //data.reserve(m_mesh.triangle_count());
         for(int i= 0; i < bvh.nodes.size(); i++)
@@ -731,11 +380,6 @@ struct RT : public AppTime
         glGenBuffers(1, &m_buffer_tri);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri);
         glBufferData(GL_SHADER_STORAGE_BUFFER, trianglesGPU.size() * sizeof(Triangle), trianglesGPU.data(), GL_STATIC_READ);
-
-        // // cree et initialise le storage buffer 1
-        // glGenBuffers(1, &m_buffer_node);
-        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
-        // glBufferData(GL_SHADER_STORAGE_BUFFER, bvh.nodes.size() * sizeof(Node), dataNode.data(), GL_STATIC_READ);
 
         // cree et initialise le storage buffer 1
         glGenBuffers(1, &m_buffer_node);
