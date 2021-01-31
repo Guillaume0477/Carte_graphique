@@ -140,10 +140,10 @@ layout(std430, binding= 1) readonly buffer nodeData
     Node nodes[];
 };
 
-layout(std430, binding= 2) readonly buffer trianglesBase
-{
-    Triangle triangles2[];
-};
+// layout(std430, binding= 2) readonly buffer trianglesBase
+// {
+//     Triangle triangles2[];
+// };
 
 
 BBox bounds( in const NodeGPU node ) 
@@ -161,6 +161,8 @@ struct RayHit
     float t;            // p(t)= o + td, position du point d'intersection sur le rayon
     vec3 d;           // direction
     int triangle_id;    // indice du triangle dans le mesh
+    vec3 tr_ab;  //cote du trianlge intersecté pour obtenir la normale
+    vec3 tr_ac;
     float u, v;
 
 };
@@ -192,6 +194,8 @@ bool intersect_new( in const Triangle triangle, inout RayHit ray, in const float
     ray.triangle_id = triangle.id;
     ray.u= u;
     ray.v= v;
+    ray.tr_ab = triangle.ab;
+    ray.tr_ac = triangle.ac;
 
     /* calculate t, ray intersects triangle */
     // rt= dot(triangle.ac, qvec) * inv_det;
@@ -440,7 +444,7 @@ void main( )
     float t, u, v;  
 
 
-    RayHit rayhit = RayHit(o,hit,d,id,u,v);
+    RayHit rayhit = RayHit(o,hit,d,id,vec3(-1),vec3(-1),u,v);
     //intersect( rayhit , tmax, hit, hitu, hitv,id);
     
     intersect( rayhit , tmax) ;
@@ -454,7 +458,7 @@ void main( )
     vec3 p = rayhit.o+ rayhit.t * rayhit.d;
     //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
     //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
-    vec3 n_p = normalize(cross(triangles2[id].ab,triangles2[id].ac));
+    vec3 n_p = normalize(cross(rayhit.tr_ab,rayhit.tr_ac));
 
     int N_ray = 1;
     vec4 ambient = vec4(0.0);
@@ -501,7 +505,7 @@ void main( )
         int id2=-1;
         float t2, u22, v2;
         //int i2;
-        RayHit rayhit2 = RayHit(p+0.01*n_p,hit2,d_l,id2,u22,v2);
+        RayHit rayhit2 = RayHit(p+0.01*n_p,hit2,d_l,id2,vec3(-1),vec3(-1),u22,v2);
 
         //test_intersect(rayhit2 , tmax2);
 

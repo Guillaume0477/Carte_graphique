@@ -754,10 +754,10 @@ struct RT : public AppTime
         // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
         // glBufferData(GL_SHADER_STORAGE_BUFFER, dataNodeGPU.size() * sizeof(NodeGPU), dataNodeGPU.data(), GL_STATIC_READ);
     
-        // cree et initialise le storage buffer 2
-        glGenBuffers(1, &m_buffer_tri2);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri2);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(Triangle), data.data(), GL_STATIC_READ);
+        // // cree et initialise le storage buffer 2
+        // glGenBuffers(1, &m_buffer_tri2);
+        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri2);
+        // glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(Triangle), data.data(), GL_STATIC_READ);
         
 
         // texture / image resultat
@@ -826,7 +826,6 @@ struct RT : public AppTime
         glDeleteTextures(1, &m_texture);
         glDeleteTextures(1, &m_seed_image);
         glDeleteBuffers(1, &m_buffer_tri);
-        glDeleteBuffers(1, &m_buffer_tri2);
         glDeleteBuffers(1, &m_buffer_node);
         glDeleteFramebuffers(1, &m_blit_framebuffer);
         return 0;
@@ -882,8 +881,8 @@ struct RT : public AppTime
         // storage buffer 1
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_buffer_node);
 
-        // storage buffer 2
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_buffer_tri2);
+        // // storage buffer 2
+        // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_buffer_tri2);
 
         
         // image texture 0, ecriture seule, mipmap 0 + format rgba8 classique
@@ -939,7 +938,6 @@ protected:
     GLuint m_texture;
     GLuint m_seed_image;
     GLuint m_buffer_tri;
-    GLuint m_buffer_tri2;
     GLuint m_buffer_node;
 
     int frame;
