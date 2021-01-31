@@ -576,7 +576,6 @@ Node make_leaf( const BBox& bounds, const int begin, const int end )
             }
         }
      }
-     
      void intersect_fast( const int index, RayHit& ray, const Vector& invd ) const
      {
          const Node& node= nodes[index];
@@ -610,7 +609,7 @@ Node make_leaf( const BBox& bounds, const int begin, const int end )
              else if(right)
                  intersect_fast(node.internal_right(), ray, invd);               // uniquement le fils droit
          }
-     }
+     } 
  };
   
 
@@ -710,7 +709,8 @@ struct RT : public AppTime
             std::cout<<"n : "<<n<<std::endl;
             for(int i= 0; i < n; i++){
                 trianglesGPU.emplace_back(bvh.triangles[i]);
-                std::cout<<"triangles id GPU: "<<trianglesGPU[i].id<<std::endl;
+                //std::cout<<"triangles id GPU: "<<trianglesGPU[i].id<<std::endl;
+
             }
         }
 
@@ -720,7 +720,8 @@ struct RT : public AppTime
         {
             TriangleData t= m_mesh.triangle(i);
             trianglesGPU2.push_back( { Point(t.a),1, Point(t.b) ,1, Point(t.c) , bvh.triangles[i].id } );
-            std::cout<<"triangles id GPU2: "<<bvh.triangles[i].id<<std::endl;
+            //std::cout<<"triangles id GPU2: "<<bvh.triangles[i].id<<std::endl;
+
             //Triangle( const Point &_a, const int _padp, const Point &_b, const int _pade1 , const Point &_c, const int _id) 
             //data.emplace_back(t, i);
         }
@@ -949,6 +950,7 @@ protected:
 int main( int argc, char **argv )
 {
     const char *filename= "data/cornell.obj";
+    //const char *filename= "data/247_House_15_obj.obj";
     //const char *filename= "data/emission.obj";
     if(argc > 1)
         filename= argv[1];

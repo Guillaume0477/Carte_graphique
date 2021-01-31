@@ -370,30 +370,32 @@ bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
         //     if ()
         //     return test_intersect_bool(ray,tmax);
         // }
-        if(intersect(node.bounds, ray, invd))
-        //if(intersect(bounds(node), ray, invd))
-        {
-            if(leaf(node))
-            {                
-                // if (index == 62){ //test node ok ?
-                //     if (node.bounds.pmax.y==1.99) {
-                //         return test_intersect_bool(ray,tmax);
-                //     }
-                // }
-                //bool intersect = false;
-                for(int i= leaf_begin(node); i < leaf_end(node); i++){
-                    if(intersect_new(triangles[i],ray,tmax)){
-                        return true;
-                    };
-                }
-            }
-            else // if(node.internal())
-            {
-                //assert(top +1 < 64);       // le noeud est touche, empiler les fils
-                stack[top++]= internal_left(node);
-                stack[top++]= internal_right(node);
+
+        if(leaf(node))
+        {                
+            // if (index == 62){ //test node ok ?
+            //     if (node.bounds.pmax.y==1.99) {
+            //         return test_intersect_bool(ray,tmax);
+            //     }
+            // }
+            //bool intersect = false;
+            for(int i= leaf_begin(node); i < leaf_end(node); i++){
+                if(intersect_new(triangles[i],ray,tmax)){
+                    return true;
+                };
             }
         }
+        else // if(node.internal())
+        {
+            if(intersect(node.bounds, ray, invd))
+    //if(intersect(bounds(node), ray, invd))
+            {
+            //assert(top +1 < 64);       // le noeud est touche, empiler les fils
+            stack[top++]= internal_left(node);
+            stack[top++]= internal_right(node);
+            }
+        }
+        
     }
     return false;
 };
@@ -454,7 +456,7 @@ void main( )
     //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
     vec3 n_p = normalize(cross(triangles2[id].ab,triangles2[id].ac));
 
-    int N_ray = 8;
+    int N_ray = 1;
     vec4 ambient = vec4(0.0);
     //uint state = 0;
 
@@ -463,12 +465,12 @@ void main( )
     
     for (int ni = 0; ni<N_ray; ni++){
 
-        uint k = uint(frame*N_ray+state);
+        uint k =  uint((frame*N_ray+ni));
 
         //vec3 d_l = normalize(vec3(0.0,0.0,1.98)-p);///
         //vec3 d_l = vec3(0.0,1.0,0.0);
-        float u1 = rng(k);
-        float u2 = rng(k);
+        float u1 = rng(state);
+        float u2 = rng(state);
         
         vec3 d_l = sample35(u1,u2);
         float pdf = pdf35(d_l);
@@ -536,7 +538,9 @@ void main( )
     //Color = vec4(1-hitu-hitv, hitu, hitv,1); //(curr_im *frame*N_ray + Color) / (frame *N_ray+N_ray);
     //Color = vec4(n_p,1);
     Color = (curr_im *frame*N_ray + Color) / (frame *N_ray+N_ray);
+    //Color = curr_im + Color/24.0f;
     // ecrire le resultat dans l'image
     imageStore(image, ivec2(gl_GlobalInvocationID.xy), Color );
+    imageStore(seeds, ivec2(gl_GlobalInvocationID.xy), uvec4(state) );
 }
 #endif
