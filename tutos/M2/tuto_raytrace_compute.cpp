@@ -624,6 +624,19 @@ struct NodeGPU
     
 };
 
+struct NodeGPUcousu
+{
+    vec3 pmin;
+    int left;
+    vec3 pmax;
+    int right;
+    vec3 skip;
+    int pad;
+
+    NodeGPUcousu( const Node& node) : pmin(node.bounds.pmin),left(node.left), pmax(node.bounds.pmax),right(node.right) {}
+    
+};
+
 
 
 struct RT : public AppTime
@@ -694,7 +707,7 @@ struct RT : public AppTime
             dataNode.emplace_back(BNode);
         }
 
-        std::vector<NodeGPU> dataNodeGPU;
+        std::vector<NodeGPU> dataNodeGPU; //change bbox pour envoyer au GPU
         //data.reserve(m_mesh.triangle_count());
         for(int i= 0; i < bvh.nodes.size(); i++)
         {
@@ -703,7 +716,7 @@ struct RT : public AppTime
             dataNodeGPU.emplace_back(BNode);
         }
 
-        std::vector<Triangle> trianglesGPU;
+        std::vector<Triangle> trianglesGPU; 
         {
             int n= bvh.triangles.size();
             std::cout<<"n : "<<n<<std::endl;
@@ -713,52 +726,22 @@ struct RT : public AppTime
 
             }
         }
-
-        std::vector<Triangle> trianglesGPU2;
-        data.reserve(m_mesh.triangle_count());
-        for(int i= 0; i < m_mesh.triangle_count(); i++)
-        {
-            TriangleData t= m_mesh.triangle(i);
-            trianglesGPU2.push_back( { Point(t.a),1, Point(t.b) ,1, Point(t.c) , bvh.triangles[i].id } );
-            //std::cout<<"triangles id GPU2: "<<bvh.triangles[i].id<<std::endl;
-
-            //Triangle( const Point &_a, const int _padp, const Point &_b, const int _pade1 , const Point &_c, const int _id) 
-            //data.emplace_back(t, i);
-        }
-
-        // std::vector<Node> nodes;
-        // data.reserve(m_mesh.triangle_count());
-        // for(int i= 0; i < m_mesh.triangle_count(); i++)
-        // {
-        //     TriangleData t= m_mesh.triangle(i);
-        //     data.push_back( { Point(t.a), Point(t.b) - Point(t.a), Point(t.c) - Point(t.a) } );
-        // }
         
         // cree et initialise le storage buffer 0
         glGenBuffers(1, &m_buffer_tri);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri);
         glBufferData(GL_SHADER_STORAGE_BUFFER, trianglesGPU.size() * sizeof(Triangle), trianglesGPU.data(), GL_STATIC_READ);
 
-        // // cree et initialise le storage buffer 0
-        // glGenBuffers(1, &m_buffer_tri);
-        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri);
-        // glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(Triangle), data.data(), GL_STATIC_READ);
-        
-        // cree et initialise le storage buffer 1
-        glGenBuffers(1, &m_buffer_node);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, bvh.nodes.size() * sizeof(Node), dataNode.data(), GL_STATIC_READ);
-
         // // cree et initialise le storage buffer 1
         // glGenBuffers(1, &m_buffer_node);
         // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
-        // glBufferData(GL_SHADER_STORAGE_BUFFER, dataNodeGPU.size() * sizeof(NodeGPU), dataNodeGPU.data(), GL_STATIC_READ);
-    
-        // // cree et initialise le storage buffer 2
-        // glGenBuffers(1, &m_buffer_tri2);
-        // glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri2);
-        // glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(Triangle), data.data(), GL_STATIC_READ);
-        
+        // glBufferData(GL_SHADER_STORAGE_BUFFER, bvh.nodes.size() * sizeof(Node), dataNode.data(), GL_STATIC_READ);
+
+        // cree et initialise le storage buffer 1
+        glGenBuffers(1, &m_buffer_node);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, dataNodeGPU.size() * sizeof(NodeGPU), dataNodeGPU.data(), GL_STATIC_READ);
+
 
         // texture / image resultat
         // cree la texture, 4 canaux, entiers 8bits normalises, standard

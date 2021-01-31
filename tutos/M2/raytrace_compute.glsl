@@ -137,7 +137,7 @@ layout(std430, binding= 0) readonly buffer triangleData
 
 layout(std430, binding= 1) readonly buffer nodeData
 {
-    Node nodes[];
+    NodeGPU nodes[];
 };
 
 // layout(std430, binding= 2) readonly buffer trianglesBase
@@ -300,9 +300,9 @@ void intersect(inout RayHit ray, in const vec3 invd, in const float tmax)
         int index= stack[--top];
         
         //const NodeGPU node= nodes[index];
-        const Node node= nodes[index];
-        if(intersect(node.bounds, ray, invd))
-        //if(intersect(bounds(node), ray, invd))
+        const NodeGPU node= nodes[index];
+        //if(intersect(node.bounds, ray, invd))
+        if(intersect(bounds(node), ray, invd))
         {
             if(leaf(node))
             {
@@ -356,7 +356,7 @@ bool test_intersect_bool( inout RayHit rayhit , in const float tmax)
 bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
 {
 
-    int stack[62];
+    int stack[64];
     int top= 0;
     
     // empiler la racine
@@ -369,7 +369,7 @@ bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
         int index= stack[--top];
 
         //const NodeGPU node= nodes[index];
-        const Node node= nodes[index];
+        const NodeGPU node= nodes[index];
         // if (index == 62){
         //     if ()
         //     return test_intersect_bool(ray,tmax);
@@ -391,8 +391,8 @@ bool intersect_bool(inout RayHit ray, in const vec3 invd, in const float tmax)
         }
         else // if(node.internal())
         {
-            if(intersect(node.bounds, ray, invd))
-    //if(intersect(bounds(node), ray, invd))
+            //if(intersect(node.bounds, ray, invd))
+            if(intersect(bounds(node), ray, invd))
             {
             //assert(top +1 < 64);       // le noeud est touche, empiler les fils
             stack[top++]= internal_left(node);
@@ -460,7 +460,7 @@ void main( )
     //vec3 p = triangles[id].a + hitu*triangles[id].ab + hitv*triangles[id].ac;
     vec3 n_p = normalize(cross(rayhit.tr_ab,rayhit.tr_ac));
 
-    int N_ray = 1;
+    int N_ray = 4;
     vec4 ambient = vec4(0.0);
     //uint state = 0;
 
