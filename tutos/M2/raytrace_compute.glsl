@@ -362,8 +362,42 @@ bool intersect_bool( inout RayHit ray , in const float tmax)
 
 };
 
+bool intersect_bool_cousu( inout RayHit ray, in const vec3 invd, in const float tmax)
+{
+
+    int index= root;
+    while(index != -1)
+    {
+        const NodeGPU_cousu node= nodes_cousu[index];
+        
+        if(leaf(node))
+        {
+            for(int i= leaf_begin(node); i < leaf_end(node); i++){
+                if(intersect_new(triangles[i],ray,tmax)){
+                    return true;
+                };
+            }
+            index= node.skip;  // passer au prochain sous arbre
+        }
+            
+        else
+        {
+            if(intersect(bounds(node), ray, invd))
+                index= index-1;     // parcourir le sous arbre
+            else
+                index= node.skip;     // passer au prochain sous arbre
+        }
+    }
+    return false;
+};
 
 
+bool intersect_bool_cousu( inout RayHit ray , in const float tmax)
+{
+    vec3 invd= vec3(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
+    return intersect_bool_cousu(ray, invd, tmax);
+
+};
 
 // image resultat
 layout(binding= 0, rgba8)  coherent uniform image2D image;
@@ -462,10 +496,16 @@ void main( )
         //     vu_sun = 0;
         // }
 
-        //////////////////////// avec bvh :  /////////////////////////////////
-        if(intersect_bool(rayhit2 , tmax2)){
+        //////////////////////// avec bvh pile:  /////////////////////////////////
+        // if(intersect_bool(rayhit2 , tmax2)){
+        //     vu_sun = 0;
+        // }
+
+        //////////////////////// avec bvh cousu:  /////////////////////////////////
+        if(intersect_bool_cousu(rayhit2 , tmax2)){
             vu_sun = 0;
         }
+
 
         if (vu_sun==1){
 
