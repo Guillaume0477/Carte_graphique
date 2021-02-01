@@ -51,6 +51,8 @@ int leaf_end(in NodeGPU node ) { return -node.right; };
 bool leaf(in NodeGPU_cousu node ) { return (node.right < 0); };                            // renvoie vrai si le noeud est une feuille
 int leaf_begin(in NodeGPU_cousu node ) { return -node.left; };           // renvoie le premier objet de la feuille
 int leaf_end(in NodeGPU_cousu node ) { return -node.right; };   
+// int leaf_begin(in NodeGPU_cousu node ) { return (-node.left >> 4 ); };           // renvoie le premier objet de la feuille
+// int leaf_end(in NodeGPU_cousu node ) { return ((-node.left >> 4) + (-node.left & 0xF) ); };   
 
 
 vec3 global( const in vec3 n) { 
@@ -264,7 +266,7 @@ void intersect_cousu( inout RayHit ray, in const vec3 invd, in const float tmax)
         else
         {
             if(intersect(bounds(node), ray, invd))
-                index= node.left;     // parcourir le sous arbre
+                index= index-1;     // parcourir le sous arbre
             else
                 index= node.skip;     // passer au prochain sous arbre
         }

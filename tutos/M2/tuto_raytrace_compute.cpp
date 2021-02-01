@@ -341,8 +341,8 @@ void Update_node(int index, std::vector<NodeGPU_Cousu> &Nodes_cousu ,std::vector
 
     if (!node_to_update.leaf()){
         std::cout << "dans if" << std::endl;
-        Nodes_cousu[node_to_update.left].skip = node_to_update.right;
-        Nodes_cousu[node_to_update.right].skip = node_to_update.skip;
+        Nodes_cousu[node_to_update.right].skip = node_to_update.left;
+        Nodes_cousu[node_to_update.left].skip = node_to_update.skip;
         Update_node(node_to_update.left, Nodes_cousu, Nodes_vector);
         Update_node(node_to_update.right, Nodes_cousu, Nodes_vector);
 
