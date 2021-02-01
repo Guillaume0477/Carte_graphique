@@ -299,6 +299,93 @@ struct NodeGPU
     
 };
 
+
+struct NodeGPU_Cousu
+{
+    vec3 pmin;
+    int left;
+    vec3 pmax;
+    int right;
+    vec3 padskip;
+    int skip;
+
+    NodeGPU_Cousu( const Node& node) : pmin(node.bounds.pmin),left(node.left), pmax(node.bounds.pmax),right(node.right), padskip(vec3(1,1,1)), skip(1)  {}
+    bool leaf( ) const { return right < 0; }  
+    
+};
+
+
+
+
+void Update_node(int index, std::vector<NodeGPU_Cousu> &Nodes_cousu ,std::vector<Node> &Nodes_vector){
+    NodeGPU_Cousu node_to_update = Nodes_cousu[index];
+
+    // Nodes_cousu[node_to_update.left] = NodeGPU_Cousu(Nodes_vector[node_to_update.left]);
+    // Nodes_cousu[node_to_update.right] = NodeGPU_Cousu(Nodes_vector[node_to_update.right]);
+    
+
+
+
+    std::cout << "--------------------------------------------------" << std::endl;
+    std::cout << "index " << index << std::endl;
+    std::cout << "left " << node_to_update.left << std::endl;
+    std::cout << "true left " << Nodes_vector[index].left << std::endl;
+    std::cout << "left left " << Nodes_cousu[node_to_update.left].left << std::endl;
+    std::cout << "left right " << Nodes_cousu[node_to_update.left].right << std::endl;
+    std::cout << "right " << node_to_update.right << std::endl;
+    std::cout << "true right " << Nodes_vector[index].right << std::endl;
+    std::cout << "right left " << Nodes_cousu[node_to_update.right].left << std::endl;
+    std::cout << "right right " << Nodes_cousu[node_to_update.right].right << std::endl;
+    std::cout << "skip " << node_to_update.skip << std::endl;
+    std::cout << "--------------------------------------------------" << std::endl;
+
+    if (!node_to_update.leaf()){
+        std::cout << "dans if" << std::endl;
+        Nodes_cousu[node_to_update.left].skip = node_to_update.right;
+        Nodes_cousu[node_to_update.right].skip = node_to_update.skip;
+        Update_node(node_to_update.left, Nodes_cousu, Nodes_vector);
+        Update_node(node_to_update.right, Nodes_cousu, Nodes_vector);
+
+    }
+
+
+
+    
+}
+
+std::vector<NodeGPU_Cousu> transform(BVH &bvh){
+//std::vector<Node> transform(BVH &bvh){
+
+    std::vector<Node> Nodes_vector = bvh.nodes;
+    
+
+    std::vector<NodeGPU_Cousu> Nodes_cousu;
+    Nodes_cousu.reserve(bvh.nodes.size());
+
+    for (int i=0;i<bvh.nodes.size();i++){
+        Nodes_cousu.emplace_back(bvh.nodes[i]);
+
+    }
+
+    int root = bvh.root;
+
+    Nodes_cousu[root] = NodeGPU_Cousu(Nodes_vector[root]);
+    Nodes_cousu[root].skip = -1;
+
+    std::cout << Nodes_cousu[root].left <<" " << Nodes_cousu[root].right <<" " << Nodes_cousu[root].skip << std::endl;
+
+    // // Nodes_cousu[Nodes_cousu[root].left] = NodeGPU_Cousu(Nodes_vector[Nodes_vector[root].left]);
+    // // Nodes_cousu[Nodes_cousu[root].right] = NodeGPU_Cousu(Nodes_vector[Nodes_vector[root].right]);
+
+
+
+    Update_node(root, Nodes_cousu, Nodes_vector);
+
+    return Nodes_cousu;
+
+
+};
+
 struct RT : public AppTime
 {
     // constructeur : donner les dimensions de l'image, et eventuellement la version d'openGL.
@@ -375,7 +462,13 @@ struct RT : public AppTime
 
             }
         }
-        
+
+                
+        std::vector<NodeGPU_Cousu> Nodes_Cousu = transform(bvh);
+        std::cout<<"NodeGPU_Cousu size: "<<Nodes_Cousu.size()<<std::endl;
+
+
+
         // cree et initialise le storage buffer 0
         glGenBuffers(1, &m_buffer_tri);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_tri);
@@ -385,6 +478,12 @@ struct RT : public AppTime
         glGenBuffers(1, &m_buffer_node);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node);
         glBufferData(GL_SHADER_STORAGE_BUFFER, dataNodeGPU.size() * sizeof(NodeGPU), dataNodeGPU.data(), GL_STATIC_READ);
+
+
+        // cree et initialise le storage buffer 2
+        glGenBuffers(1, &m_buffer_node_cousu);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer_node_cousu);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, Nodes_Cousu.size() * sizeof(NodeGPU_Cousu), Nodes_Cousu.data(), GL_STATIC_READ);
 
 
         // texture / image resultat
@@ -441,6 +540,8 @@ struct RT : public AppTime
 
         frame=0;
         
+
+
         // nettoyage
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -454,6 +555,7 @@ struct RT : public AppTime
         glDeleteTextures(1, &m_seed_image);
         glDeleteBuffers(1, &m_buffer_tri);
         glDeleteBuffers(1, &m_buffer_node);
+        glDeleteBuffers(1, &m_buffer_node_cousu);
         glDeleteFramebuffers(1, &m_blit_framebuffer);
         return 0;
     }
@@ -508,8 +610,8 @@ struct RT : public AppTime
         // storage buffer 1
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_buffer_node);
 
-        // // storage buffer 2
-        // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_buffer_tri2);
+        // storage buffer 2
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_buffer_node_cousu);
 
         
         // image texture 0, ecriture seule, mipmap 0 + format rgba8 classique
@@ -566,6 +668,7 @@ protected:
     GLuint m_seed_image;
     GLuint m_buffer_tri;
     GLuint m_buffer_node;
+    GLuint m_buffer_node_cousu;
 
     int frame;
     int root_uni;

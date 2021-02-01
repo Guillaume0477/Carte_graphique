@@ -29,6 +29,16 @@ struct NodeGPU
     int right;
 };
 
+struct NodeGPU_cousu
+{
+    vec3 pmin;
+    int left;
+    vec3 pmax;
+    int right;
+    vec3 pad;
+    int skip;
+};
+
 bool internal(in NodeGPU node ) { return (node.right > 0); };                        // renvoie vrai si le noeud est un noeud interne
 int internal_left(in NodeGPU node ) {  return node.left; };     // renvoie le fils gauche du noeud interne 
 int internal_right(in NodeGPU node ) { return node.right; };   // renvoie le fils droit
@@ -36,6 +46,11 @@ int internal_right(in NodeGPU node ) { return node.right; };   // renvoie le fil
 bool leaf(in NodeGPU node ) { return (node.right < 0); };                            // renvoie vrai si le noeud est une feuille
 int leaf_begin(in NodeGPU node ) { return -node.left; };           // renvoie le premier objet de la feuille
 int leaf_end(in NodeGPU node ) { return -node.right; };   
+
+
+bool leaf(in NodeGPU_cousu node ) { return (node.right < 0); };                            // renvoie vrai si le noeud est une feuille
+int leaf_begin(in NodeGPU_cousu node ) { return -node.left; };           // renvoie le premier objet de la feuille
+int leaf_end(in NodeGPU_cousu node ) { return -node.right; };   
 
 
 vec3 global( const in vec3 n) { 
@@ -95,7 +110,20 @@ layout(std430, binding= 1) readonly buffer nodeData
     NodeGPU nodes[];
 };
 
+layout(std430, binding= 2) readonly buffer nodeData_cousu
+{
+    NodeGPU_cousu nodes_cousu[];
+};
+
 BBox bounds( in const NodeGPU node ) 
+{
+   BBox box;
+   box.pmin= node.pmin;
+   box.pmax= node.pmax;
+   return box;
+};
+
+BBox bounds( in const NodeGPU_cousu node ) 
 {
    BBox box;
    box.pmin= node.pmin;
@@ -193,26 +221,67 @@ void intersect(inout RayHit ray, in const vec3 invd, in const float tmax)
         //const NodeGPU node= nodes[index];
         const NodeGPU node= nodes[index];
         //if(intersect(node.bounds, ray, invd))
-        if(intersect(bounds(node), ray, invd))
+
+        if(leaf(node))
         {
-            if(leaf(node))
+            for(int i= leaf_begin(node); i < leaf_end(node); i++)
             {
-                for(int i= leaf_begin(node); i < leaf_end(node); i++){
-                    intersect_new(triangles[i],ray,tmax);
-                }
+                intersect_new(triangles[i],ray,tmax);
             }
-            else // if(node.internal())
+        }
+        else // if(node.internal())
+        {
+            if(intersect(bounds(node), ray, invd))
             {
                 // le noeud est touche, empiler les fils
                 stack[top++]= internal_left(node);
                 stack[top++]= internal_right(node);
             }
         }
+        
+    }
+};
+
+// parcours iterarif, arbre cousu
+// next() : renvoie le prochain noeud dans le sous arbre
+// skip( ) : renvoie le prochain sous arbre
+void intersect_cousu( inout RayHit ray, in const vec3 invd, in const float tmax)
+{
+
+    int index= root;
+    while(index != -1)
+    {
+        const NodeGPU_cousu node= nodes_cousu[index];
+        
+        if(leaf(node))
+        {
+            for(int i= leaf_begin(node); i < leaf_end(node); i++){
+                intersect_new(triangles[i],ray,tmax);
+            }
+            index= node.skip;  // passer au prochain sous arbre
+        }
+            
+        else
+        {
+            if(intersect(bounds(node), ray, invd))
+                index= node.left;     // parcourir le sous arbre
+            else
+                index= node.skip;     // passer au prochain sous arbre
+        }
     }
 };
 
 
-void intersect( inout RayHit ray , in const float tmax) //avec bvh
+
+void intersect_cousu( inout RayHit ray , in const float tmax) //avec bvh cousu
+{
+    vec3 invd= vec3(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
+    intersect_cousu(ray, invd, tmax);
+
+};
+
+
+void intersect( inout RayHit ray , in const float tmax) //avec bvh pile
 {
     vec3 invd= vec3(1.0f / ray.d.x, 1.0f / ray.d.y, 1.0f / ray.d.z);
     intersect(ray, invd, tmax);
@@ -292,6 +361,8 @@ bool intersect_bool( inout RayHit ray , in const float tmax)
 };
 
 
+
+
 // image resultat
 layout(binding= 0, rgba8)  coherent uniform image2D image;
 layout(binding= 1, r32ui)  coherent uniform uimage2D seeds;
@@ -327,8 +398,11 @@ void main( )
     //////////////////////// sans bvh :  /////////////////////////////////
     //test_intersect( rayhit , tmax) ;
 
-    //////////////////////// avec bvh :  /////////////////////////////////
-    intersect( rayhit , tmax) ;
+    //////////////////////// avec bvh pile:  /////////////////////////////////
+    //intersect( rayhit , tmax) ;
+
+    //////////////////////// avec bvh cousu:  /////////////////////////////////
+    intersect_cousu( rayhit , tmax) ;
 
     hit=rayhit.t;
     hitu=rayhit.u;
